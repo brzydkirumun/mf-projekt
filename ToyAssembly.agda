@@ -28,6 +28,9 @@ valOf : List Pair → ℕ → Maybe
 valOf [] n                = Nothing
 valOf (⟨ x , x₁ ⟩ ∷ ns) n = if x ≡ℕ? n then (Just x₁) else valOf ns n
 
+-- Dodaje parę do listy. Jeżeli w liście istnieje już para z taką samą pierwszą
+-- współrzędną, to zamiast dodawać kolejną, zmienia drugą współrzędną na tę
+-- dodawanej.
 push : List Pair → Pair → List Pair
 push [] n = n ∷ []
 push (⟨ x , x₁ ⟩ ∷ ns) ⟨ x₂ , x₃ ⟩
@@ -99,3 +102,11 @@ s2 = step record { mem = []; acc = Nothing; err = false }
       = record { mem = []; acc = Nothing; err = true }
     step record { mem = mem ; acc = (Just x₂) ; err = err } (Begin store x x₁)
       = record { mem = push mem ⟨ x , x₂ ⟩; acc = (Just x₂) ; err = err }
+
+
+{- Kompilator -}
+
+c : L1 → L2
+c (n x)      = {!!}
+c (cs ̂+ cs₁) = {!!}
+c (cs ̂* cs₁) = {!!}
