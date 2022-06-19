@@ -27,6 +27,11 @@ data Maybe : Set where
   Nothing : Maybe
   Just_   : ℕ → Maybe
 
+appMaybe : (ℕ → ℕ → ℕ) → Maybe → Maybe → Maybe
+appMaybe _ Nothing _          = Nothing
+appMaybe _ _ Nothing          = Nothing
+appMaybe f (Just x) (Just x₁) = Just (f x x₁)
+
 -- Przegrzebuje listę par z ℕ² i zwraca 2. koordynat pierwszej napotkanej
 -- pary z n-em na pierwszej współrzędnej
 valOf : List Pair → ℕ → Maybe
@@ -90,6 +95,9 @@ data L2 : Set where
   Begin_ : A → L2
 
 -- Kroki przy rozważaniu semantyki
+
+error = record { mem = []; acc = Nothing; err = true }
+
 step : M → L2 → M
 step state (Begin end)
   = state
@@ -97,21 +105,20 @@ step state (Begin end)
 step record { mem = mem ; acc = acc ; err = err } (Begin set x x₁)
   = step record { mem = mem; acc = Just x; err = err } (Begin x₁)
 
-step record { mem = mem ; acc = Nothing ; err = err } (Begin add x x₁)
-  = record { mem = []; acc = Nothing; err = true }
-step record { mem = mem ; acc = (Just x₂) ; err = err } (Begin add x x₁)
-  = step record { mem = mem; acc = (Just (x + x₂)); err = err } (Begin x₁)
+-- Tu się działy dziwne rzeczy. Jak próbowałem to zrobić z wykorzystaniem systemu errorów,
+-- to nagle Agda uznawała, że się to nie sterminuje. Dlatego jest tak, jak jest.
+step record { mem = mem ; acc = acc ; err = err } (Begin add x x₁)
+  = step record { mem = mem; acc = appMaybe (_+_) acc (valOf mem x); err = err } (Begin x₁)
 
-step record { mem = mem ; acc = Nothing ; err = err } (Begin mul x x₁)
-  = record { mem = []; acc = Nothing; err = true }
-step record { mem = mem ; acc = (Just x₂) ; err = err } (Begin mul x x₁)
-  = step record { mem = mem; acc = (Just (x * x₂)); err = err } (Begin x₁)
+-- Problem ten sam co wyżej
+step record { mem = mem ; acc = acc ; err = err } (Begin mul x x₁)
+  = step record { mem = mem; acc = appMaybe (_*_) acc (valOf mem x); err = err } (Begin x₁)
 
 step record { mem = mem ; acc = acc ; err = err } (Begin load x x₁)
   = step record { mem = mem; acc = (valOf mem x); err = err } (Begin x₁)
 
 step record { mem = mem ; acc = Nothing ; err = err } (Begin store x x₁)
-  = record { mem = []; acc = Nothing; err = true }
+  = error
 step record { mem = mem ; acc = (Just x₂) ; err = err } (Begin store x x₁)
   = step record { mem = push mem ⟨ x , x₂ ⟩; acc = (Just x₂) ; err = err } (Begin x₁)
 
@@ -119,34 +126,13 @@ step record { mem = mem ; acc = (Just x₂) ; err = err } (Begin store x x₁)
 s2 : L2 → M
 s2 = step record { mem = []; acc = Nothing; err = false }
 
--- Dowody, że to działa dla przykładowych programów
-prog-test-end : s2 (Begin end) ≡ record { mem = []; acc = Nothing; err = false }
-prog-test-end = refl
-
-prog-test-set : ∀ (x : ℕ) → s2 (Begin (set x end)) ≡ record { mem = []; acc = Just x; err = false }
-prog-test-set = λ x → refl
-
-prog-test-add : ∀ (x₁ x₂ : ℕ) → s2 (Begin (set x₁ (add x₂ end))) ≡ record { mem = []; acc = Just (x₂ + x₁); err = false }
-prog-test-add = λ x₁ x₂ → refl
-
-prog-test-mul : ∀ (x₁ x₂ : ℕ) → s2 (Begin (set x₁ (mul x₂ end))) ≡ record { mem = []; acc = Just (x₂ * x₁); err = false }
-prog-test-mul = λ x₁ x₂ → refl
-
-prog-test-store : ∀ (x m : ℕ) → s2 (Begin (set x (store m end))) ≡ record { mem = ⟨ m , x ⟩ ∷ []; acc = Just x; err = false }
-prog-test-store = λ x m → refl
-
-prog-1       = Begin (set 1 (store 0 (set 2 (store 1 (load 0 end)))))
-prog-1-exp   = record { mem = ⟨ 0 , 1 ⟩ ∷ ⟨ 1 , 2 ⟩ ∷ []; acc = Just 1; err = false }
-prog-1-proof : s2 prog-1 ≡ prog-1-exp
-prog-1-proof = refl
-
 
 {- Kompilator -}
 
-compiler : L1 → (A → A)
+compiler : L1 → A → A
 compiler (n x)      = set x
-compiler (cs ̂+ cs₁) = {!!}
-compiler (cs ̂* cs₁) = {!!}
+compiler (cs ̂+ cs₁) = compiler cs store 0
+compiler (cs ̂* cs₁) = store 0
 
 c : L1 → L2
 c cs = Begin compiler cs end
