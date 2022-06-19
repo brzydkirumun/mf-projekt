@@ -140,9 +140,13 @@ prog-1-exp   = record { mem = ⟨ 0 , 1 ⟩ ∷ ⟨ 1 , 2 ⟩ ∷ []; acc = Just
 prog-1-proof : s2 prog-1 ≡ prog-1-exp
 prog-1-proof = refl
 
+
 {- Kompilator -}
 
+compiler : L1 → (A → A)
+compiler (n x)      = set x
+compiler (cs ̂+ cs₁) = {!!}
+compiler (cs ̂* cs₁) = {!!}
+
 c : L1 → L2
-c (n x)      = {!!}
-c (cs ̂+ cs₁) = {!!}
-c (cs ̂* cs₁) = {!!}
+c cs = Begin compiler cs end
