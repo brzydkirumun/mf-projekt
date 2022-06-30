@@ -19,7 +19,7 @@ zero ≡ℕ? suc m  = false
 suc n ≡ℕ? zero  = false
 suc n ≡ℕ? suc m = n ≡ℕ? m
 
--- Wyciąganie danych z tablicy asocjacyjnej z cakowitymi kluczami
+-- Wyciąganie danych z tablicy asocjacyjnej z całkowitymi kluczami
 vlookup : {A : Set} -> ℕ -> List (Pair ℕ A) -> Maybe A
 vlookup x []               = Nothing
 vlookup x (⟨ k , v ⟩ ∷ ps) = if x ≡ℕ? k then Just v else vlookup x ps
@@ -64,7 +64,15 @@ data L2 : Set where
 start : M
 start = record { mem = [] ; acc = Nothing }
 
--- Backend funkcji semantyki dla L2
+
+{- Backend funkcji semantyki dla L2
+ -
+ - ta ochydna pragma jest tu dlatego, że (i tu moja hipoteza) Agda zakłada, że może istnieć nieskończone
+ - wyrażenie L2 które nie będzie miało na końcu "end" i krzyczy o nieterminowaniu się tej funkcji.
+ - Pozwoliłem sobie jednak założyć, że rozważamy skończone programy.
+ -}
+
+{-# NON_TERMINATING #-}
 step : Pair M L2 → Maybe M
 step ⟨ state , Begin end ⟩
   = Just state
@@ -87,3 +95,7 @@ step ⟨ state , Begin load x x₁ ⟩ with vlookup x (M.mem state)
 step ⟨ state , Begin store x x₁ ⟩ with M.acc state
 ... | Nothing = Nothing
 ... | Just n  = Just ⟨ record { mem = insert ⟨ x , n ⟩ (M.mem state) ; acc = M.acc state } , Begin x₁ ⟩ >>= step
+
+-- Semantyka języka L2
+s2 : L2 -> Maybe M
+s2 x = step ⟨ start , x ⟩
